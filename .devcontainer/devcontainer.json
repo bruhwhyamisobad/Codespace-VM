@@ -1,27 +1,13 @@
 {
   "name": "Webtop Ubuntu KDE",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
-  "postCreateCommand": "bash -lc 'if ! command -v docker >/dev/null; then sudo apt-get update && sudo apt-get install -y docker.io && sudo usermod -aG docker $USER || true && sudo apt-get clean && rm -rf /var/lib/apt/lists/*; fi'",
-  "postStartCommand": "bash -lc 'chmod +x \"${containerWorkspaceFolder}/start-webtop.sh\" && \"${containerWorkspaceFolder}/start-webtop.sh\"'",
   "remoteUser": "vscode",
-  "forwardPorts": [3000],
-  "portsAttributes": {
-    "3000": {
-      "label": "Webtop",
-      "onAutoForward": "openPreview"
-    }
-  },
-  "containerEnv": {
-    "DEBIAN_FRONTEND": "noninteractive"
-  },
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
-      }
-    }
-  },
   "features": {
     "docker-in-docker": "latest"
-  }
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
+  ],
+  "postStartCommand": "bash -c 'if ! docker ps -q -f name=webtop | grep -q .; then docker run -d --name webtop --restart unless-stopped -p 3000:3000 -v ${localWorkspaceFolder}/webtop-config:/config ghcr.io/linuxserver/webtop:ubuntu-kde; fi'",
+  "forwardPorts": [3000]
 }
