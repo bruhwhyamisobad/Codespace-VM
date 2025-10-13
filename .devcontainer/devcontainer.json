@@ -1,7 +1,7 @@
 {
-    "name": "Webtop KDE Ubuntu Devcontainer",
+    "name": "Webtop Codespace",
     "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
-    "remoteUser": "abc",
+    "remoteUser": "user",
     "forwardPorts": [3000, 3001],
     "mounts": [
         "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
@@ -10,10 +10,9 @@
         "PUID": "1000",
         "PGID": "1000",
         "TZ": "America/Los_Angeles",
-        "CUSTOM_USER": "abc",
         "PASSWORD": ""
     },
-    "postCreateCommand": "echo 'Webtop KDE Ubuntu devcontainer ready!'",
+    "postCreateCommand": "echo 'Webtop container is ready!'",
     "settings": {
         "terminal.integrated.shell.linux": "/bin/bash"
     }
