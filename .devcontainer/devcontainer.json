@@ -1,22 +1,19 @@
 {
   "name": "Webtop Codespace",
   "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
-  "remoteUser": "vscode",
+  "postStartCommand": "echo 'Webtop container is ready!'",
   "mounts": [
     "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
   ],
+  "remoteUser": "abc",
   "forwardPorts": [3000, 3001],
   "containerEnv": {
     "DEBIAN_FRONTEND": "noninteractive",
     "TZ": "America/Los_Angeles",
     "PUID": "1000",
-    "PGID": "1000",
-    "CUSTOM_USER": "${{ secrets.WEBTOP_USER }}",
-    "PASSWORD": "${{ secrets.WEBTOP_PASS }}"
+    "PGID": "1000"
   },
   "runArgs": [
-    "--shm-size=1gb",
-    "--security-opt=no-new-privileges"
-  ],
-  "postStartCommand": "echo 'Webtop container is ready!'"
+    "--shm-size=1gb"
+  ]
 }
