@@ -1,27 +1,22 @@
 {
-  "name": "Webtop Ubuntu KDE",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
-  "postCreateCommand": "bash -lc 'if ! command -v docker >/dev/null; then sudo apt-get update && sudo apt-get install -y docker.io && sudo usermod -aG docker $USER || true && sudo apt-get clean && rm -rf /var/lib/apt/lists/*; fi'",
-  "postStartCommand": "bash -lc 'chmod +x \"${containerWorkspaceFolder}/start-webtop.sh\" && \"${containerWorkspaceFolder}/start-webtop.sh\"'",
-  "remoteUser": "vscode",
-  "forwardPorts": [3000],
-  "portsAttributes": {
-    "3000": {
-      "label": "Webtop",
-      "onAutoForward": "openPreview"
-    }
-  },
+  "name": "Webtop Codespace (Secure)",
+  "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
+  "remoteUser": "abc",
+  "mounts": [
+    "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
+  ],
+  "forwardPorts": [3000, 3001],
   "containerEnv": {
-    "DEBIAN_FRONTEND": "noninteractive"
+    "DEBIAN_FRONTEND": "noninteractive",
+    "TZ": "America/Los_Angeles",
+    "PUID": "1000",
+    "PGID": "1000",
+    "CUSTOM_USER": "${{ secrets.WEBTOP_USER }}",
+    "PASSWORD": "${{ secrets.WEBTOP_PASS }}"
   },
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
-      }
-    }
-  },
-  "features": {
-    "docker-in-docker": "latest"
-  }
+  "runArgs": [
+    "--shm-size=1gb",
+    "--security-opt=no-new-privileges"
+  ],
+  "postStartCommand": "echo 'Webtop container is ready!'"
 }
