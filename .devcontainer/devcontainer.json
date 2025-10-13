@@ -8,6 +8,15 @@
   "mounts": [
     "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
   ],
-  "postStartCommand": "bash -c 'if ! docker ps -q -f name=webtop | grep -q .; then docker run -d --name webtop --restart unless-stopped -p 3000:3000 -v ${localWorkspaceFolder}/webtop-config:/config ghcr.io/linuxserver/webtop:ubuntu-kde; fi'",
-  "forwardPorts": [3000]
+  "postStartCommand": "bash ${localWorkspaceFolder}/.devcontainer/start-webtop.sh",
+  "forwardPorts": [3000, 3001],
+  "portsAttributes": {
+    "3000": { "label": "Webtop HTTP", "onAutoForward": "openBrowser" },
+    "3001": { "label": "Webtop HTTPS", "onAutoForward": "openBrowser" }
+  },
+  "runArgs": [
+    "--init",
+    "-e", "WEBTOP_USER=${WEBTOP_USER}",
+    "-e", "WEBTOP_PASSWORD=${WEBTOP_PASSWORD}"
+  ]
 }
