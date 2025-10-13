@@ -5,7 +5,7 @@
   "mounts": [
     "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
   ],
-  "remoteUser": "abc",
+  "remoteUser": "vscode",
   "forwardPorts": [3000, 3001],
   "containerEnv": {
     "DEBIAN_FRONTEND": "noninteractive",
