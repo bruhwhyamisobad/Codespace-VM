@@ -1,7 +1,7 @@
 {
   "name": "Webtop Codespace",
   "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
-  "remoteUser": "abc",
+  "remoteUser": "vscode",
   "mounts": [
     "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
   ],
