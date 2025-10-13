@@ -1,19 +1,20 @@
 {
-  "name": "Webtop Codespace",
-  "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
-  "postStartCommand": "echo 'Webtop container is ready!'",
-  "mounts": [
-    "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
-  ],
-  "remoteUser": "vscode",
-  "forwardPorts": [3000, 3001],
-  "containerEnv": {
-    "DEBIAN_FRONTEND": "noninteractive",
-    "TZ": "America/Los_Angeles",
-    "PUID": "1000",
-    "PGID": "1000"
-  },
-  "runArgs": [
-    "--shm-size=1gb"
-  ]
+    "name": "Webtop KDE Ubuntu Devcontainer",
+    "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
+    "remoteUser": "abc",
+    "forwardPorts": [3000, 3001],
+    "mounts": [
+        "source=${localWorkspaceFolder}/webtop-home,target=/config,type=bind"
+    ],
+    "containerEnv": {
+        "PUID": "1000",
+        "PGID": "1000",
+        "TZ": "America/Los_Angeles",
+        "CUSTOM_USER": "abc",
+        "PASSWORD": ""
+    },
+    "postCreateCommand": "echo 'Webtop KDE Ubuntu devcontainer ready!'",
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    }
 }
