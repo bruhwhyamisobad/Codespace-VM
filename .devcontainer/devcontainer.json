@@ -1,5 +1,5 @@
 {
-  "name": "Webtop Codespace (Secure)",
+  "name": "Webtop Codespace",
   "image": "lscr.io/linuxserver/webtop:ubuntu-kde",
   "remoteUser": "abc",
   "mounts": [
