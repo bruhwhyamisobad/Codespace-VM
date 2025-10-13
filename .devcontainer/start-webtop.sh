@@ -6,7 +6,7 @@ IMAGE="ghcr.io/linuxserver/webtop:ubuntu-kde"
 CONTAINER_NAME="webtop"
 PORT_HTTP=3000
 PORT_HTTPS=3001
-CONFIG_DIR="${PWD}/webtop-config"
+CONFIG_DIR="/home/vscode/webtop-config"
 PUID=1000
 PGID=1000
 TZ="America/Los_Angeles"
@@ -77,7 +77,7 @@ docker run -d \
 sleep 5
 
 # === Install PRoot apps (persistent) ===
-APPS=("filezilla" "vscode" "firefox")
+APPS=("filezilla" "vscode" "firefox")  # Add more apps as needed
 echo "Installing PRoot apps: ${APPS[*]}"
 for APP in "${APPS[@]}"; do
     if ! docker exec -it "$CONTAINER_NAME" bash -c "proot-apps list | grep -q '^$APP$'" >/dev/null 2>&1; then
@@ -91,12 +91,12 @@ done
 # Display access info
 echo "✅ Webtop is running!"
 echo "HTTP:  http://localhost:${PORT_HTTP}"
-echo "HTTPS: https://localhost:${PORT_HTTPS}"
+echo "HTTPS: https://localhost:${PORT_HTTPS} (trusted self-signed certificate)"
 echo "Username: $CUSTOM_USER"
 echo "Password: $PASSWORD"
 echo "Persistent files & PRoot apps: $CONFIG_DIR"
 
-# Open browser automatically if possible
+# Open in browser automatically if possible
 if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "https://localhost:${PORT_HTTPS}" || true
 fi

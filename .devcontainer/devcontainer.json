@@ -6,17 +6,12 @@
     "docker-in-docker": "latest"
   },
   "mounts": [
-    "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
+    "source=/home/vscode/webtop-config,target=/config,type=bind"
   ],
-  "postStartCommand": "bash ${localWorkspaceFolder}/.devcontainer/start-webtop.sh",
+  "postStartCommand": "bash -c 'chmod +x ${containerWorkspaceFolder}/.devcontainer/start-webtop.sh && ${containerWorkspaceFolder}/.devcontainer/start-webtop.sh'",
   "forwardPorts": [3000, 3001],
   "portsAttributes": {
-    "3000": { "label": "Webtop HTTP", "onAutoForward": "openBrowser" },
-    "3001": { "label": "Webtop HTTPS", "onAutoForward": "openBrowser" }
-  },
-  "runArgs": [
-    "--init",
-    "-e", "WEBTOP_USER=${WEBTOP_USER}",
-    "-e", "WEBTOP_PASSWORD=${WEBTOP_PASSWORD}"
-  ]
+    "3000": { "label": "Webtop HTTP", "onAutoForward": "openPreview" },
+    "3001": { "label": "Webtop HTTPS", "onAutoForward": "openPreview" }
+  }
 }
