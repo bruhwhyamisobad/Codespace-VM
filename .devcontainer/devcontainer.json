@@ -1,17 +1,28 @@
 {
-  "name": "Webtop Ubuntu KDE",
+  "name": "Webtop Devcontainer",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "remoteUser": "vscode",
   "features": {
     "docker-in-docker": "latest"
   },
   "mounts": [
-    "source=/home/vscode/webtop-config,target=/config,type=bind"
+    "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
   ],
-  "postStartCommand": "bash -c 'chmod +x ${containerWorkspaceFolder}/.devcontainer/start-webtop.sh && ${containerWorkspaceFolder}/.devcontainer/start-webtop.sh'",
+  "postStartCommand": "bash -lc 'mkdir -p \"${containerWorkspaceFolder}/webtop-config\" && chmod +x \"${containerWorkspaceFolder}/.devcontainer/start-webtop.sh\" && \"${containerWorkspaceFolder}/.devcontainer/start-webtop.sh\"'",
+  "containerEnv": {
+    "DEBIAN_FRONTEND": "noninteractive",
+    "TZ": "America/Los_Angeles",
+    "WEBTOP_IMAGE": "lscr.io/linuxserver/webtop:ubuntu-kde"
+  },
   "forwardPorts": [3000, 3001],
   "portsAttributes": {
-    "3000": { "label": "Webtop HTTP", "onAutoForward": "openPreview" },
-    "3001": { "label": "Webtop HTTPS", "onAutoForward": "openPreview" }
+    "3000": {
+      "label": "Webtop HTTP",
+      "onAutoForward": "openBrowser"
+    },
+    "3001": {
+      "label": "Webtop HTTPS",
+      "onAutoForward": "openPreview"
+    }
   }
 }
