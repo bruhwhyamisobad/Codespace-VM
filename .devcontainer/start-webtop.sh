@@ -53,7 +53,6 @@ RUN_ARGS=(
   -e "TZ=America/Los_Angeles"
   -v "$PERSISTENT_HOME":/config
   --shm-size="$SHM_SIZE"
-  --security-opt no-new-privileges:true
   --restart unless-stopped
   --label "devcontainer.webtop=true"
 )
