@@ -1,102 +1,84 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# === Config ===
-IMAGE="ghcr.io/linuxserver/webtop:ubuntu-kde"
+# Idempotent Webtop launcher for Codespaces/devcontainer.
+# - Persists all webtop user data to <workspace>/webtop-config
+# - Uses Docker-in-Docker feature provided by devcontainer
+# - Uses latest image by default via WEBTOP_IMAGE env var (set in devcontainer.json)
+# - Does not configure password/auth; run behind a proxy if exposing publicly
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+IMAGE="${WEBTOP_IMAGE:-lscr.io/linuxserver/webtop:ubuntu-kde}"
 CONTAINER_NAME="webtop"
-PORT_HTTP=3000
-PORT_HTTPS=3001
-CONFIG_DIR="/home/vscode/webtop-config"
-PUID=1000
-PGID=1000
-TZ="America/Los_Angeles"
+PERSISTENT_HOME="$REPO_ROOT/webtop-config"
+HOST_UID="$(id -u)"
+HOST_GID="$(id -g)"
+SHM_SIZE="${WEBTOP_SHM_SIZE:-2gb}"
+HEALTH_TIMEOUT="${WEBTOP_HEALTH_TIMEOUT:-60}"
+MEM_LIMIT="${WEBTOP_MEM_LIMIT:-}"
+CPU_LIMIT="${WEBTOP_CPU_LIMIT:-}"
 
-# === Credentials from Codespaces secrets ===
-if [ -z "${WEBTOP_USER:-}" ] || [ -z "${WEBTOP_PASSWORD:-}" ]; then
-    echo "❌ ERROR: WEBTOP_USER and WEBTOP_PASSWORD must be set as Codespaces secrets!"
-    exit 1
-fi
-CUSTOM_USER="$WEBTOP_USER"
-PASSWORD="$WEBTOP_PASSWORD"
-
-# Optional GPU support
-GPU_FLAG=""
-if [ -d "/dev/dri" ]; then
-    GPU_FLAG="--device /dev/dri:/dev/dri"
+mkdir -p "$PERSISTENT_HOME"
+if [ -z "$(ls -A "$PERSISTENT_HOME")" ]; then
+  touch "$PERSISTENT_HOME/.gitkeep"
 fi
 
-# Ensure persistent config exists
-mkdir -p "$CONFIG_DIR"
-
-# Stop & remove existing container
-EXISTING_CONTAINER=$(docker ps -a -q -f name="^/${CONTAINER_NAME}$" || true)
-if [ -n "$EXISTING_CONTAINER" ]; then
-    echo "Stopping and removing existing Webtop container..."
-    docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
-    docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR: docker CLI not found. Ensure docker-in-docker feature is enabled in the devcontainer."
+  exit 1
 fi
 
-# Generate self-signed HTTPS certificate if missing
-SSL_CERT_DIR="$CONFIG_DIR/ssl"
-mkdir -p "$SSL_CERT_DIR"
-CERT_FILE="$SSL_CERT_DIR/webtop.crt"
-KEY_FILE="$SSL_CERT_DIR/webtop.key"
-if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
-    echo "Generating self-signed HTTPS certificate..."
-    openssl req -x509 -nodes -days 365 \
-        -subj "/CN=localhost" \
-        -newkey rsa:2048 \
-        -keyout "$KEY_FILE" \
-        -out "$CERT_FILE"
+if ! docker info >/dev/null 2>&1; then
+  echo "ERROR: Docker daemon not responding. Restart the Codespace or the docker-in-docker feature."
+  exit 1
 fi
 
-# Run Webtop container
-echo "Starting Webtop container..."
-docker run -d \
-  --name "$CONTAINER_NAME" \
-  --restart unless-stopped \
-  -p "${PORT_HTTP}:3000" \
-  -p "${PORT_HTTPS}:3001" \
-  -v "${CONFIG_DIR}:/config" \
-  -e PUID="$PUID" \
-  -e PGID="$PGID" \
-  -e TZ="$TZ" \
-  -e CUSTOM_HTTPS_PORT="$PORT_HTTPS" \
-  -e SSL_CERT_FILE="/config/ssl/webtop.crt" \
-  -e SSL_KEY_FILE="/config/ssl/webtop.key" \
-  -e CUSTOM_USER="$CUSTOM_USER" \
-  -e PASSWORD="$PASSWORD" \
-  --shm-size="1gb" \
-  --security-opt no-new-privileges:true \
-  --read-only \
-  --tmpfs /tmp:rw,size=256m \
-  $GPU_FLAG \
-  "$IMAGE"
+chown -R "${HOST_UID}:${HOST_GID}" "$PERSISTENT_HOME" || true
 
-# Wait for container initialization
-sleep 5
+EXISTING="$(docker ps -a -q -f name="^/${CONTAINER_NAME}$" || true)"
+if [ -n "$EXISTING" ]; then
+  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+fi
 
-# === Install PRoot apps (persistent) ===
-APPS=("filezilla" "vscode" "firefox")  # Add more apps as needed
-echo "Installing PRoot apps: ${APPS[*]}"
-for APP in "${APPS[@]}"; do
-    if ! docker exec -it "$CONTAINER_NAME" bash -c "proot-apps list | grep -q '^$APP$'" >/dev/null 2>&1; then
-        echo "Installing $APP..."
-        docker exec -it "$CONTAINER_NAME" proot-apps install "$APP" || echo "⚠️ Failed to install $APP"
-    else
-        echo "$APP already installed, skipping."
-    fi
+docker pull "$IMAGE" || true
+
+RUN_ARGS=(
+  -d
+  --name "$CONTAINER_NAME"
+  -p 3000:3000
+  -p 3001:3001
+  -e "PUID=$HOST_UID"
+  -e "PGID=$HOST_GID"
+  -e "TZ=America/Los_Angeles"
+  -v "$PERSISTENT_HOME":/config
+  --shm-size="$SHM_SIZE"
+  --security-opt no-new-privileges:true
+  --restart unless-stopped
+  --label "devcontainer.webtop=true"
+)
+
+if [ -n "$MEM_LIMIT" ]; then
+  RUN_ARGS+=(--memory="$MEM_LIMIT")
+fi
+if [ -n "$CPU_LIMIT" ]; then
+  RUN_ARGS+=(--cpus="$CPU_LIMIT")
+fi
+
+# health command ensures Docker marks the container healthy when the web UI responds
+RUN_ARGS+=(--health-cmd='curl -fsS http://localhost:3000 || exit 1' --health-interval=10s --health-retries=6 --health-timeout=2s)
+
+docker run "${RUN_ARGS[@]}" "$IMAGE"
+
+for i in $(seq 1 "$HEALTH_TIMEOUT"); do
+  if curl -sSf --connect-timeout 1 "http://localhost:3000" >/dev/null 2>&1; then
+    echo "SUCCESS: Webtop available at http://localhost:3000"
+    echo "Persistent config at: $PERSISTENT_HOME"
+    exit 0
+  fi
+  sleep 1
 done
 
-# Display access info
-echo "✅ Webtop is running!"
-echo "HTTP:  http://localhost:${PORT_HTTP}"
-echo "HTTPS: https://localhost:${PORT_HTTPS} (trusted self-signed certificate)"
-echo "Username: $CUSTOM_USER"
-echo "Password: $PASSWORD"
-echo "Persistent files & PRoot apps: $CONFIG_DIR"
-
-# Open in browser automatically if possible
-if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "https://localhost:${PORT_HTTPS}" || true
-fi
+echo "ERROR: Webtop did not become healthy in ${HEALTH_TIMEOUT}s. Last 200 log lines:"
+docker logs --tail 200 "$CONTAINER_NAME" || true
+exit 1
