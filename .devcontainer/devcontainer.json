@@ -12,7 +12,10 @@
   "containerEnv": {
     "DEBIAN_FRONTEND": "noninteractive",
     "TZ": "America/Los_Angeles",
-    "WEBTOP_IMAGE": "lscr.io/linuxserver/webtop:ubuntu-kde"
+    "WEBTOP_IMAGE": "lscr.io/linuxserver/webtop:ubuntu-kde",
+    "WEBTOP_MEM_LIMIT": "6g",
+    "WEBTOP_CPU_LIMIT": "1.8",
+    "WEBTOP_SHM_SIZE": "1gb"
   },
   "forwardPorts": [3000, 3001],
   "portsAttributes": {
