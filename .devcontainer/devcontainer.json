@@ -3,7 +3,7 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "remoteUser": "vscode",
   "features": {
-    "docker-in-docker": "latest"
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "mounts": [
     "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
