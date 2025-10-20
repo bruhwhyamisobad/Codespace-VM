@@ -14,14 +14,9 @@ IMAGE="${WEBTOP_IMAGE:-lscr.io/linuxserver/webtop:ubuntu-kde}"
 CONTAINER_NAME="webtop"
 PERSISTENT_HOME="$REPO_ROOT/webtop-config"
 
-# Always use vscode-style uid/gid (1000), even if script runs as root
-if [ "$(id -u)" -eq 0 ]; then
-  HOST_UID="${WEBTOP_HOST_UID:-1000}"
-  HOST_GID="${WEBTOP_HOST_GID:-1000}"
-else
-  HOST_UID="$(id -u)"
-  HOST_GID="$(id -g)"
-fi
+# Always use vscode uid/gid 1000 to avoid permission mismatches on workspace mounts
+HOST_UID=1000
+HOST_GID=1000
 
 # Defaults tuned for a 2-core / 8 GB Codespace
 SHM_SIZE="${WEBTOP_SHM_SIZE:-1gb}"
@@ -29,19 +24,19 @@ MEM_LIMIT="${WEBTOP_MEM_LIMIT:-6g}"
 CPU_LIMIT="${WEBTOP_CPU_LIMIT:-1.8}"
 HEALTH_TIMEOUT="${WEBTOP_HEALTH_TIMEOUT:-60}"
 
+# Ensure persistent folder exists on the host workspace
 mkdir -p "$PERSISTENT_HOME"
 if [ -z "$(ls -A "$PERSISTENT_HOME")" ]; then
   touch "$PERSISTENT_HOME/.gitkeep"
 fi
 
-# Wait up to 10 seconds for Docker CLI and daemon to be ready
-MAX_WAIT=10
+# Wait up to 60 seconds for Docker CLI and daemon to be ready (d-in-d can be slow)
+MAX_WAIT=60
 WAITED=0
 
-# Wait for Docker CLI
 while ! command -v docker >/dev/null 2>&1; do
   if [ "$WAITED" -ge "$MAX_WAIT" ]; then
-    echo "❌ ERROR: Docker CLI not available after ${MAX_WAIT}s. Ensure docker-in-docker feature is active."
+    echo "ERROR: Docker CLI not available after ${MAX_WAIT}s. Ensure docker-in-docker feature is active."
     exit 1
   fi
   sleep 1
@@ -49,16 +44,16 @@ while ! command -v docker >/dev/null 2>&1; do
 done
 
 WAITED=0
-# Wait for Docker daemon
 while ! docker info >/dev/null 2>&1; do
   if [ "$WAITED" -ge "$MAX_WAIT" ]; then
-    echo "❌ ERROR: Docker daemon not responding after ${MAX_WAIT}s. Restart Codespace or docker-in-docker."
+    echo "ERROR: Docker daemon not responding after ${MAX_WAIT}s. Restart Codespace or docker-in-docker."
     exit 1
   fi
   sleep 1
   WAITED=$((WAITED+1))
 done
 
+# Ensure persistent folder ownership
 chown -R "${HOST_UID}:${HOST_GID}" "$PERSISTENT_HOME" || true
 
 # Remove any existing container
@@ -67,15 +62,17 @@ if [ -n "$EXISTING" ]; then
   docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 fi
 
+# Pull the latest Webtop image
 docker pull "$IMAGE" || true
 
+# Build Docker run arguments
 RUN_ARGS=(
   -d
   --name "$CONTAINER_NAME"
   -p 3000:3000
   -p 3001:3001
-  -e "PUID=${HOST_UID:-1000}"
-  -e "PGID=${HOST_GID:-1000}"
+  -e "PUID=${HOST_UID}"
+  -e "PGID=${HOST_GID}"
   -e "TZ=America/Los_Angeles"
   -v "$PERSISTENT_HOME":/config
   --shm-size="$SHM_SIZE"
@@ -85,7 +82,7 @@ RUN_ARGS=(
   --label "devcontainer.webtop=true"
 )
 
-# Apply limits
+# Apply resource limits
 if [ -n "$MEM_LIMIT" ]; then
   RUN_ARGS+=(--memory="$MEM_LIMIT")
 fi
@@ -101,8 +98,10 @@ RUN_ARGS+=(
   --health-timeout=2s
 )
 
+# Start Webtop container
 docker run "${RUN_ARGS[@]}" "$IMAGE"
 
+# Wait until Webtop responds or dump logs
 for i in $(seq 1 "$HEALTH_TIMEOUT"); do
   if curl -sSf --connect-timeout 1 "http://localhost:3000" >/dev/null 2>&1; then
     echo "Webtop available at http://localhost:3000"
