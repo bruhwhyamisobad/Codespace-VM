@@ -34,15 +34,30 @@ if [ -z "$(ls -A "$PERSISTENT_HOME")" ]; then
   touch "$PERSISTENT_HOME/.gitkeep"
 fi
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "ERROR: docker CLI not found. Ensure docker-in-docker feature is enabled in the devcontainer."
-  exit 1
-fi
+# Wait up to 10 seconds for Docker CLI and daemon to be ready
+MAX_WAIT=10
+WAITED=0
 
-if ! docker info >/dev/null 2>&1; then
-  echo "ERROR: Docker daemon not responding. Restart the Codespace or the docker-in-docker feature."
-  exit 1
-fi
+# Wait for Docker CLI
+while ! command -v docker >/dev/null 2>&1; do
+  if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+    echo "❌ ERROR: Docker CLI not available after ${MAX_WAIT}s. Ensure docker-in-docker feature is active."
+    exit 1
+  fi
+  sleep 1
+  WAITED=$((WAITED+1))
+done
+
+WAITED=0
+# Wait for Docker daemon
+while ! docker info >/dev/null 2>&1; do
+  if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+    echo "❌ ERROR: Docker daemon not responding after ${MAX_WAIT}s. Restart Codespace or docker-in-docker."
+    exit 1
+  fi
+  sleep 1
+  WAITED=$((WAITED+1))
+done
 
 chown -R "${HOST_UID}:${HOST_GID}" "$PERSISTENT_HOME" || true
 
