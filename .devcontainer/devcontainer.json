@@ -6,7 +6,7 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "mounts": [
-    "source=${localWorkspaceFolder}/webtop-config,target=/config,type=bind"
+    "source=${localWorkspaceFolder}/webtop-config,target=${containerWorkspaceFolder}/webtop-config,type=bind"
   ],
   "postStartCommand": "bash -lc 'mkdir -p \"${containerWorkspaceFolder}/webtop-config\" && chmod +x \"${containerWorkspaceFolder}/.devcontainer/start-webtop.sh\" && \"${containerWorkspaceFolder}/.devcontainer/start-webtop.sh\"'",
   "containerEnv": {
